@@ -16,7 +16,7 @@ export default async function Home() {
   return (
     <main className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
       <div className="max-w-md w-full bg-white rounded-lg shadow p-8 space-y-4">
-        <h1 className="text-2xl font-bold">Room Service SaaS</h1>
+        <h1 className="text-2xl font-bold">Bambyce Serve</h1>
         <p className="text-gray-600 text-sm">Frontend ↔ Backend health check</p>
         <div className="rounded border bg-gray-50 p-4">
           <pre className="text-xs overflow-auto">
