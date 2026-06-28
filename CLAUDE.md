@@ -1,4 +1,4 @@
-# CLAUDE.md — bambyce-serve-web
+# CLAUDE.md — serveyce-qr-web
 
 > Context for AI assistants (Claude Code, Cursor, etc.) working in this repository.
 
@@ -6,20 +6,20 @@
 
 ## What this repo is
 
-This is the **frontend** for **Bambyce Serve**, the first product of the Bambyce platform (bambyce.com).
+This is the **frontend** for **ServeyceQr**, the first product of the Serveyce platform (serveyce.com).
 
-Bambyce Serve is a QR-code-based service portal for hospitality operators in Turkey: short-term rental hosts, small hotels, and hostels. The app has two surfaces:
+ServeyceQr is a QR-code-based service portal for hospitality operators in Turkey: short-term rental hosts, small hotels, and hostels. The app has two surfaces:
 
 1. **Public guest pages** at `/o/[slug]/l/[locationId]` — mobile-first, no auth, the QR-code-scan landing experience. This is the "money shot" of the product and should look polished.
 2. **Authenticated dashboard** at `/dashboard/*` — for hotel admins and staff to configure their property, manage requests, capture KBS guest data.
 
-The companion backend repository is `bambyce-serve-api` (NestJS + Prisma + Postgres, deployed on Railway).
+The companion backend repository is `serveyce-qr-api` (NestJS + Prisma + Postgres, deployed on Railway).
 
 ### Brand context
 
-Bambyce is a platform brand intended for multiple verticals over time:
-- **Bambyce Serve** (this product, V1) — hospitality
-- **Bambyce Order** (future) — restaurants, cafés, bars
+Serveyce is a platform brand intended for multiple verticals over time:
+- **ServeyceQr** (this product, V1) — hospitality
+- **ServeyceOrder** (future) — restaurants, cafés, bars
 
 The shared platform layer uses generic data names (`Organization`, `Location`, `OfferingType`, `Request`). The **UI in V1 is hospitality-specific** — copy says "Welcome to {hotel name}", not "Welcome to {organization name}". Don't add restaurant features.
 
@@ -51,7 +51,7 @@ The shared platform layer uses generic data names (`Organization`, `Location`, `
 ## Folder structure
 
 ```
-bambyce-serve-web/
+serveyce-qr-web/
 ├── app/
 │   ├── (dashboard)/              # (planned) authed admin/staff routes
 │   │   ├── layout.tsx
@@ -158,8 +158,8 @@ When you call the backend from a Server Component, this points at `localhost:300
 
 Both servers must run together:
 
-1. In `bambyce-serve-api`: `docker compose up -d` then `pnpm start:dev`
-2. In `bambyce-serve-web`: `pnpm dev`
+1. In `serveyce-qr-api`: `docker compose up -d` then `pnpm start:dev`
+2. In `serveyce-qr-web`: `pnpm dev`
 
 Open `http://localhost:3000` to see the app.
 
@@ -211,7 +211,7 @@ chore: add shadcn/ui setup
 
 ## Reference
 
-- **Backend repo:** `bambyce-serve-api` (separate, deployed on Railway)
-- **Full product spec:** lives in `bambyce-serve-api/SPEC.md` (single source of truth — eventually moves to a docs repo)
-- **Brand site (planned):** bambyce.com
+- **Backend repo:** `serveyce-qr-api` (separate, deployed on Railway)
+- **Full product spec:** lives in `serveyce-qr-api/SPEC.md` (single source of truth — eventually moves to a docs repo)
+- **Brand site (planned):** serveyce.com
 - **Production frontend:** Vercel-hosted (see Vercel dashboard for URL)

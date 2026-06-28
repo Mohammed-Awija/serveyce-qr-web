@@ -35,7 +35,7 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-# Room Service SaaS — Web
+# ServeyceQr — Web
 
-Production: https://roomservice-web.vercel.app
-API: https://roomservice-api-production.up.railway.app
+Production: https://serveyce-qr-web.vercel.app
+API: https://serveyce-qr-api-production.up.railway.app
