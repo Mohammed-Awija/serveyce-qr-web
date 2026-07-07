@@ -43,6 +43,7 @@ export default async function GuestPage({
       orgName={data.organization.name}
       locationName={data.location.name}
       offerings={data.offerings}
+      defaultLanguage={data.organization.defaultLanguage}
     />
   );
 }

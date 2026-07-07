@@ -1,0 +1,55 @@
+export type Locale = 'en' | 'tr' | 'ar';
+
+export const LOCALES: { code: Locale; label: string; dir: 'ltr' | 'rtl' }[] = [
+  { code: 'en', label: 'English', dir: 'ltr' },
+  { code: 'tr', label: 'Türkçe', dir: 'ltr' },
+  { code: 'ar', label: 'العربية', dir: 'rtl' },
+];
+
+export const translations = {
+  en: {
+    tapWhatYouNeed: "Tap what you need — we'll take care of the rest.",
+    welcomeTo: 'Welcome to',
+    noServices: 'No services are available right now.',
+    youreRequesting: "You're requesting",
+    notesPlaceholder: 'Anything we should know? (optional)',
+    sendRequest: 'Send request',
+    sending: 'Sending…',
+    requestReceived: 'Request received',
+    confirmationBody: 'will take care of your request shortly.',
+    requestSomethingElse: 'Request something else',
+    errorTryAgain: 'Something went wrong. Please try again.',
+    pageUnavailable: "This room page isn't available.",
+    checkFrontDesk: 'Please check with the front desk.',
+  },
+  tr: {
+    tapWhatYouNeed: 'İhtiyacınız olana dokunun — gerisini biz hallederiz.',
+    welcomeTo: 'Hoş geldiniz',
+    noServices: 'Şu anda mevcut hizmet yok.',
+    youreRequesting: 'Talebiniz',
+    notesPlaceholder: 'Bilmemiz gereken bir şey var mı? (isteğe bağlı)',
+    sendRequest: 'Talebi gönder',
+    sending: 'Gönderiliyor…',
+    requestReceived: 'Talep alındı',
+    confirmationBody: 'talebinizle kısa süre içinde ilgilenecek.',
+    requestSomethingElse: 'Başka bir şey talep et',
+    errorTryAgain: 'Bir şeyler ters gitti. Lütfen tekrar deneyin.',
+    pageUnavailable: 'Bu oda sayfası mevcut değil.',
+    checkFrontDesk: 'Lütfen resepsiyona danışın.',
+  },
+  ar: {
+    tapWhatYouNeed: 'اضغط على ما تحتاجه — سنتولى الباقي.',
+    welcomeTo: 'مرحباً بك في',
+    noServices: 'لا توجد خدمات متاحة حالياً.',
+    youreRequesting: 'أنت تطلب',
+    notesPlaceholder: 'هل هناك ما يجب أن نعرفه؟ (اختياري)',
+    sendRequest: 'إرسال الطلب',
+    sending: 'جارٍ الإرسال…',
+    requestReceived: 'تم استلام الطلب',
+    confirmationBody: 'سيهتم بطلبك قريباً.',
+    requestSomethingElse: 'اطلب شيئاً آخر',
+    errorTryAgain: 'حدث خطأ ما. يرجى المحاولة مرة أخرى.',
+    pageUnavailable: 'صفحة الغرفة هذه غير متاحة.',
+    checkFrontDesk: 'يرجى مراجعة مكتب الاستقبال.',
+  },
+} as const;
