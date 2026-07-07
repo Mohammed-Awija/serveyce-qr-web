@@ -1,3 +1,12 @@
+import { publicFetch } from '@/lib/public-api';
+import { GuestServices } from './guest-services';
+
+type GuestContext = {
+  organization: { name: string; defaultLanguage: string };
+  location: { id: string; name: string };
+  offerings: { id: string; name: string; icon: string }[];
+};
+
 export default async function GuestPage({
   params,
 }: {
@@ -5,18 +14,35 @@ export default async function GuestPage({
 }) {
   const { slug, locationId } = await params;
 
-  return (
-    <main className="min-h-screen flex items-center justify-center p-8 bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center space-y-3">
-        <h1 className="text-xl font-bold">Guest Services</h1>
-        <p className="text-gray-600 text-sm">
-          Coming soon — this is where guests will request services.
-        </p>
-        <div className="text-xs text-gray-400 pt-4 border-t">
-          <p>Organization: {slug}</p>
-          <p>Location: {locationId}</p>
+  let data: GuestContext | null = null;
+  let error: string | null = null;
+
+  try {
+    data = await publicFetch(`/public/o/${slug}/l/${locationId}`);
+  } catch {
+    error = 'This page could not be found.';
+  }
+
+  if (error || !data) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6 bg-[#F5F2EC]">
+        <div className="text-center">
+          <p className="text-[#1B3A4B] font-medium">This room page isn&apos;t available.</p>
+          <p className="text-sm text-[#6B7280] mt-2">
+            Please check with the front desk.
+          </p>
         </div>
-      </div>
-    </main>
+      </main>
+    );
+  }
+
+  return (
+    <GuestServices
+      slug={slug}
+      locationId={locationId}
+      orgName={data.organization.name}
+      locationName={data.location.name}
+      offerings={data.offerings}
+    />
   );
 }
