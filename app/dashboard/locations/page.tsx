@@ -1,6 +1,7 @@
 import { apiFetch } from '@/lib/api';
 import { LocationForm } from './location-form';
 import { DeleteButton } from './delete-button';
+import { QrButton } from './qr-button';
 
 type Location = {
   id: string;
@@ -11,12 +12,22 @@ type Location = {
   createdAt: string;
 };
 
+type Me = {
+  organization: { slug: string; name: string } | null;
+};
+
 export default async function LocationsPage() {
   let locations: Location[] = [];
+  let orgSlug: string | null = null;
   let error: string | null = null;
 
   try {
-    locations = await apiFetch('/locations');
+    const [locs, me] = await Promise.all([
+      apiFetch('/locations') as Promise<Location[]>,
+      apiFetch('/me') as Promise<Me>,
+    ]);
+    locations = locs;
+    orgSlug = me.organization?.slug ?? null;
   } catch (e) {
     error = (e as Error).message;
   }
@@ -51,7 +62,12 @@ export default async function LocationsPage() {
                 {loc.notes ? ` · ${loc.notes}` : ''}
               </p>
             </div>
-            <DeleteButton id={loc.id} />
+            <div className="flex items-center gap-4">
+              {orgSlug && (
+                <QrButton orgSlug={orgSlug} locationId={loc.id} locationName={loc.name} />
+              )}
+              <DeleteButton id={loc.id} />
+            </div>
           </div>
         ))}
       </div>
