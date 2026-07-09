@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { createNode, deleteNode } from './actions';
+import { ModifierPanel } from './modifier-panel';
 import type { TreeNode } from './types';
 
 export function TreeEditor({ tree }: { tree: TreeNode[] }) {
@@ -23,6 +24,7 @@ export function TreeEditor({ tree }: { tree: TreeNode[] }) {
 function NodeRow({ node, depth }: { node: TreeNode; depth: number }) {
   const [expanded, setExpanded] = useState(true);
   const [addingChild, setAddingChild] = useState(false);
+  const [configuring, setConfiguring] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isCategory = node.type === 'CATEGORY';
@@ -76,6 +78,14 @@ function NodeRow({ node, depth }: { node: TreeNode; depth: number }) {
               + Add inside
             </button>
           )}
+          {!isCategory && (
+            <button
+              onClick={() => setConfiguring((c) => !c)}
+              className="text-sm text-purple-600 hover:text-purple-800"
+            >
+              {configuring ? 'Close' : 'Configure'}
+            </button>
+          )}
           <button
             onClick={remove}
             disabled={isPending}
@@ -99,6 +109,12 @@ function NodeRow({ node, depth }: { node: TreeNode; depth: number }) {
             label={`Add inside "${node.name}"`}
             onDone={() => setAddingChild(false)}
           />
+        </div>
+      )}
+
+      {configuring && !isCategory && (
+        <div style={{ marginLeft: (depth + 1) * 20 }} className="mt-1">
+          <ModifierPanel itemId={node.id} />
         </div>
       )}
 
