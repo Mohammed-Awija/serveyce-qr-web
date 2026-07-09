@@ -6,7 +6,7 @@ import { translations, LOCALES, type Locale } from './translations';
 
 type Offering = { id: string; name: string; icon: string };
 
-// Language switcher — shown on every screen
+// Language switcher — landing screen only; the choice carries through the rest of the flow
 function LanguageSwitcher({
   locale,
   setLocale,
@@ -101,9 +101,6 @@ export function GuestServices({
         >
           {t.requestSomethingElse}
         </button>
-        <div className="mt-10">
-          <LanguageSwitcher locale={locale} setLocale={setLocale} />
-        </div>
       </main>
     );
   }
