@@ -1,10 +1,9 @@
 import { publicFetch } from '@/lib/public-api';
-import { GuestServices } from './guest-services';
+import { GuestFlow } from './guest-flow';
 
 type GuestContext = {
   organization: { name: string; defaultLanguage: string };
   location: { id: string; name: string };
-  offerings: { id: string; name: string; icon: string }[];
 };
 
 export default async function GuestPage({
@@ -20,7 +19,7 @@ export default async function GuestPage({
   try {
     data = await publicFetch(`/public/o/${slug}/l/${locationId}`);
   } catch {
-    error = 'This page could not be found.';
+    error = 'unavailable';
   }
 
   if (error || !data) {
@@ -37,12 +36,11 @@ export default async function GuestPage({
   }
 
   return (
-    <GuestServices
+    <GuestFlow
       slug={slug}
       locationId={locationId}
       orgName={data.organization.name}
       locationName={data.location.name}
-      offerings={data.offerings}
       defaultLanguage={data.organization.defaultLanguage}
     />
   );

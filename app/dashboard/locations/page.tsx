@@ -1,7 +1,6 @@
 import { apiFetch } from '@/lib/api';
 import { LocationForm } from './location-form';
-import { DeleteButton } from './delete-button';
-import { QrButton } from './qr-button';
+import { LocationRow } from './location-row';
 
 type Location = {
   id: string;
@@ -51,24 +50,7 @@ export default async function LocationsPage() {
           </p>
         )}
         {locations.map((loc) => (
-          <div
-            key={loc.id}
-            className="flex items-center justify-between rounded border bg-white p-4"
-          >
-            <div>
-              <p className="font-medium">{loc.name}</p>
-              <p className="text-xs text-gray-500">
-                {loc.kind}
-                {loc.notes ? ` · ${loc.notes}` : ''}
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              {orgSlug && (
-                <QrButton orgSlug={orgSlug} locationId={loc.id} locationName={loc.name} />
-              )}
-              <DeleteButton id={loc.id} />
-            </div>
-          </div>
+          <LocationRow key={loc.id} loc={loc} orgSlug={orgSlug} />
         ))}
       </div>
     </main>
