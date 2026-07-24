@@ -1,4 +1,20 @@
 @import "tailwindcss";
+@import "@uploadthing/react/styles.css";
+
+/*
+ * Guest-page theming. The wrapper carries per-tenant CSS custom properties
+ * (see lib/design-tokens.ts); these two rules apply the resolved font pair
+ * without every heading needing an inline style. Scoped to [data-sq-theme] so
+ * the dashboard is untouched.
+ */
+[data-sq-theme] {
+  font-family: var(--sq-font-body);
+}
+[data-sq-theme] h1,
+[data-sq-theme] h2,
+[data-sq-theme] h3 {
+  font-family: var(--sq-font-heading);
+}
 
 :root {
   --background: #ffffff;

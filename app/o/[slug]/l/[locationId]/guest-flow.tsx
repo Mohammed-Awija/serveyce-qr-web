@@ -2,17 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import { publicFetch } from '@/lib/public-api';
+import type { ServiceComponent } from '@/lib/components';
 import { translations, LOCALES, type Locale } from './translations';
+import { formatMoney } from '@/lib/components';
+import {
+  GUEST_REGISTRY,
+  buildComponentValues,
+  isSubmittable,
+  orderTotal,
+  type Answers,
+} from './component-registry';
+import { resolveMenuVariants, type MenuNode } from './menu-variants';
+import { DEFAULT_TOKENS, type Variants } from '@/lib/design-tokens';
 
-type Node = { id: string; name: string; type: 'CATEGORY' | 'ITEM'; icon: string };
-type Option = { id: string; name: string };
-type Group = {
-  id: string;
-  name: string;
-  selectionType: 'SINGLE' | 'MULTIPLE';
-  required: boolean;
-  options: Option[];
-};
+type Node = MenuNode;
 
 // Language switcher — landing screen only; the choice carries through the rest of the flow
 function LanguageSwitcher({
@@ -30,13 +33,45 @@ function LanguageSwitcher({
           onClick={() => setLocale(l.code)}
           className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
             locale === l.code
-              ? 'bg-[#1B3A4B] text-white'
-              : 'bg-white text-[#6B7280] border border-[#E5E0D5]'
+              ? 'bg-[var(--sq-color-brand,#1B3A4B)] text-white'
+              : 'bg-[var(--sq-color-surface,#FFFFFF)] text-[var(--sq-color-text-secondary,#6B7280)] border border-[var(--sq-color-border,#E5E0D5)]'
           }`}
         >
           {l.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Sticky order total across all priced components. Preview only — the server
+ * recomputes authoritatively. Mixed currencies are shown side by side rather
+ * than summed, since V1 does no conversion.
+ */
+function OrderTotalBar({
+  total,
+  t,
+}: {
+  total: ReturnType<typeof orderTotal>;
+  t: (typeof translations)[Locale];
+}) {
+  if (total.kind === 'empty') return null;
+
+  const amountText =
+    total.kind === 'single'
+      ? formatMoney(total.amount, total.currency)
+      : total.parts.map((p) => formatMoney(p.amount, p.currency)).join(' + ');
+
+  return (
+    <div className="flex items-baseline justify-between border-b border-[var(--sq-color-border,#E5E0D5)] pb-3">
+      <div className="flex flex-col">
+        <span className="text-base font-semibold text-[var(--sq-color-text-primary,#1B3A4B)]">{t.total}</span>
+        <span className="text-xs text-[var(--sq-color-text-secondary,#9CA3AF)]">{t.estimatedTotal}</span>
+      </div>
+      <span className="text-lg font-semibold text-[var(--sq-color-text-primary,#1B3A4B)] text-right">
+        {amountText}
+      </span>
     </div>
   );
 }
@@ -47,9 +82,20 @@ type Props = {
   orgName: string;
   locationName: string;
   defaultLanguage: string;
+  /** Presentation variants from the org's published template. */
+  variants?: Variants;
 };
 
-export function GuestFlow({ slug, locationId, orgName, locationName, defaultLanguage }: Props) {
+export function GuestFlow({
+  slug,
+  locationId,
+  orgName,
+  locationName,
+  defaultLanguage,
+  variants = DEFAULT_TOKENS.variants,
+}: Props) {
+  // Card / price / section markup all come from the variant registry.
+  const menu = resolveMenuVariants(variants);
   const initialLocale = (['en', 'tr', 'ar'].includes(defaultLanguage)
     ? defaultLanguage
     : 'en') as Locale;
@@ -67,10 +113,10 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
 
   // Item configuration state
   const [configuringItem, setConfiguringItem] = useState<Node | null>(null);
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [groupsError, setGroupsError] = useState(false);
-  const [picks, setPicks] = useState<Record<string, string[]>>({}); // groupId -> optionIds
+  const [components, setComponents] = useState<ServiceComponent[]>([]);
+  const [componentsLoading, setComponentsLoading] = useState(false);
+  const [componentsError, setComponentsError] = useState(false);
+  const [answers, setAnswers] = useState<Answers>({}); // componentId -> that type's answer
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
 
@@ -99,23 +145,23 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
     };
   }, [slug, locationId, currentParentId]);
 
-  // Load the configured item's modifier groups
+  // Load the configured item's service components
   useEffect(() => {
     if (!configuringItem) return;
     let cancelled = false;
     const itemId = configuringItem.id;
     void (async () => {
       try {
-        const data = await publicFetch(`/public/o/${slug}/items/${itemId}/modifiers`);
+        const data = await publicFetch(`/public/o/${slug}/items/${itemId}/components`);
         if (cancelled) return;
-        setGroups(data.groups);
-        setGroupsError(false);
+        setComponents(data.components);
+        setComponentsError(false);
       } catch {
         if (cancelled) return;
-        setGroups([]);
-        setGroupsError(true);
+        setComponents([]);
+        setComponentsError(true);
       } finally {
-        if (!cancelled) setGroupsLoading(false);
+        if (!cancelled) setComponentsLoading(false);
       }
     })();
     return () => {
@@ -130,19 +176,19 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
       return;
     }
     // Item: clear anything left from a previously configured item before the fetch lands
-    setGroups([]);
-    setPicks({});
+    setComponents([]);
+    setAnswers({});
     setNotes('');
     setStatus('idle');
-    setGroupsError(false);
-    setGroupsLoading(true);
+    setComponentsError(false);
+    setComponentsLoading(true);
     setConfiguringItem(node);
   }
 
   function closeItem() {
     setConfiguringItem(null);
-    setGroups([]);
-    setPicks({});
+    setComponents([]);
+    setAnswers({});
     setNotes('');
     setStatus('idle');
   }
@@ -153,38 +199,20 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
     closeItem();
   }
 
-  function togglePick(group: Group, optionId: string) {
-    setPicks((prev) => {
-      const current = prev[group.id] ?? [];
-      if (group.selectionType === 'SINGLE') {
-        return { ...prev, [group.id]: [optionId] };
-      }
-      // MULTIPLE: toggle
-      return {
-        ...prev,
-        [group.id]: current.includes(optionId)
-          ? current.filter((id) => id !== optionId)
-          : [...current, optionId],
-      };
-    });
+  // Each component type owns its answer shape; the shell just stores it.
+  function setAnswer(componentId: string, value: unknown) {
+    setAnswers((prev) => ({ ...prev, [componentId]: value }));
   }
 
-  const allRequiredMet = groups
-    .filter((g) => g.required)
-    .every((g) => (picks[g.id]?.length ?? 0) > 0);
-  const canSubmit = !groupsLoading && !groupsError && allRequiredMet && status !== 'sending';
+  const canSubmit =
+    !componentsLoading &&
+    !componentsError &&
+    isSubmittable(components, answers) &&
+    status !== 'sending';
 
   async function submit() {
     if (!configuringItem) return;
-    // Build human-readable selections snapshot
-    const selections = groups
-      .map((g) => ({
-        groupName: g.name,
-        optionNames: (picks[g.id] ?? [])
-          .map((oid) => g.options.find((o) => o.id === oid)?.name)
-          .filter(Boolean) as string[],
-      }))
-      .filter((s) => s.optionNames.length > 0);
+    const componentValues = buildComponentValues(components, answers);
 
     setStatus('sending');
     try {
@@ -192,7 +220,7 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
         method: 'POST',
         body: JSON.stringify({
           offeringNodeId: configuringItem.id,
-          selections,
+          componentValues,
           notes: notes.trim() || undefined,
         }),
       });
@@ -213,20 +241,20 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
     return (
       <main
         dir={dir}
-        className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#F5F2EC] text-center"
+        className="min-h-screen flex flex-col items-center justify-center p-6 bg-[var(--sq-color-background,#F5F2EC)] text-center"
       >
-        <div className="w-16 h-16 rounded-full bg-[#1B3A4B] flex items-center justify-center mb-6">
+        <div className="w-16 h-16 rounded-full bg-[var(--sq-color-brand,#1B3A4B)] flex items-center justify-center mb-6">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
             <path d="M20 6L9 17l-5-5" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold text-[#1B3A4B]">{t.requestReceived}</h1>
-        <p className="text-[#6B7280] mt-2 max-w-xs">
+        <h1 className="text-2xl font-semibold text-[var(--sq-color-text-primary,#1B3A4B)]">{t.requestReceived}</h1>
+        <p className="text-[var(--sq-color-text-secondary,#6B7280)] mt-2 max-w-xs">
           {orgName} {t.confirmationBody}
         </p>
         <button
           onClick={reset}
-          className="mt-8 text-[#1B3A4B] font-medium underline underline-offset-4"
+          className="mt-8 text-[var(--sq-color-text-primary,#1B3A4B)] font-medium underline underline-offset-4"
         >
           {t.requestSomethingElse}
         </button>
@@ -237,64 +265,50 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
   // Item configuration screen
   if (configuringItem) {
     return (
-      <main dir={dir} className="min-h-screen bg-[#F5F2EC] pb-40">
+      <main dir={dir} className="min-h-screen bg-[var(--sq-color-background,#F5F2EC)] pb-40">
         <header className="px-6 pt-8 pb-4">
-          <button onClick={closeItem} className="text-sm text-[#6B7280] mb-4">
+          <button onClick={closeItem} className="text-sm text-[var(--sq-color-text-secondary,#6B7280)] mb-4">
             ← {t.back}
           </button>
-          <h1 className="text-2xl font-semibold text-[#1B3A4B]">{configuringItem.name}</h1>
+          <h1 className="text-2xl font-semibold text-[var(--sq-color-text-primary,#1B3A4B)]">{configuringItem.name}</h1>
         </header>
 
         <div className="px-6 space-y-6">
-          {groupsLoading && <p className="text-[#6B7280] text-sm">…</p>}
-          {groupsError && <p className="text-sm text-red-600">{t.errorTryAgain}</p>}
-          {groups.map((group) => (
-            <div key={group.id}>
-              <div className="flex items-baseline justify-between mb-2">
-                <h2 className="font-medium text-[#1B3A4B]">{group.name}</h2>
-                <span className="text-xs text-[#B08D57]">
-                  {group.required ? t.required : ''}
-                  {group.selectionType === 'MULTIPLE' ? ` · ${t.pickMany}` : ''}
-                </span>
+          {componentsLoading && <p className="text-[var(--sq-color-text-secondary,#6B7280)] text-sm">…</p>}
+          {componentsError && <p className="text-sm text-red-600">{t.errorTryAgain}</p>}
+          {components.map((component) => {
+            // Types not yet wired into the registry render nothing.
+            const def = GUEST_REGISTRY[component.type];
+            if (!def) return null;
+            return (
+              <div key={component.id}>
+                <def.Render
+                  component={component}
+                  answers={answers}
+                  setAnswer={setAnswer}
+                  t={t}
+                />
               </div>
-              <div className="space-y-2">
-                {group.options.map((opt) => {
-                  const chosen = (picks[group.id] ?? []).includes(opt.id);
-                  return (
-                    <button
-                      key={opt.id}
-                      onClick={() => togglePick(group, opt.id)}
-                      className={`w-full flex items-center justify-between rounded-xl p-4 border-2 ${
-                        chosen
-                          ? 'bg-[#1B3A4B] border-[#1B3A4B] text-white'
-                          : 'bg-white border-transparent text-[#1B3A4B]'
-                      }`}
-                    >
-                      <span>{opt.name}</span>
-                      {chosen && <span>✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Submit bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] p-6 space-y-3">
+        <div className="fixed bottom-0 left-0 right-0 bg-[var(--sq-color-surface,#FFFFFF)] rounded-t-3xl shadow-[var(--sq-shadow,0_-4px_24px_rgba(0,0,0,0.08))] p-6 space-y-3">
+          <OrderTotalBar total={orderTotal(components, answers)} t={t} />
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder={t.notesPlaceholder}
             rows={2}
             maxLength={500}
-            className="w-full rounded-xl border border-[#E5E0D5] p-3 text-[#1B3A4B] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#1B3A4B] resize-none"
+            className="w-full rounded-[var(--sq-radius-control,0.75rem)] border border-[var(--sq-color-border,#E5E0D5)] p-3 text-[var(--sq-color-text-primary,#1B3A4B)] placeholder:text-[var(--sq-color-text-secondary,#9CA3AF)] focus:outline-none focus:border-[var(--sq-color-brand,#1B3A4B)] resize-none"
           />
           {status === 'error' && <p className="text-sm text-red-600">{t.errorTryAgain}</p>}
           <button
             onClick={submit}
             disabled={!canSubmit}
-            className="w-full bg-[#1B3A4B] text-white rounded-xl py-4 font-medium text-lg disabled:opacity-40"
+            className="w-full bg-[var(--sq-color-brand,#1B3A4B)] text-white rounded-[var(--sq-radius-control,0.75rem)] py-4 font-medium text-lg disabled:opacity-40"
           >
             {status === 'sending' ? t.sending : t.sendRequest}
           </button>
@@ -305,15 +319,15 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
 
   // Browsing the tree
   return (
-    <main dir={dir} className="min-h-screen bg-[#F5F2EC] pb-16">
+    <main dir={dir} className="min-h-screen bg-[var(--sq-color-background,#F5F2EC)] pb-16">
       <header className="px-6 pt-8 pb-4">
         {trail.length === 1 && (
           <div className="mb-6">
             <LanguageSwitcher locale={locale} setLocale={setLocale} />
           </div>
         )}
-        <p className="text-sm tracking-wide uppercase text-[#B08D57] font-medium">{orgName}</p>
-        <h1 className="text-2xl font-semibold text-[#1B3A4B] mt-2">
+        <p className="text-sm tracking-wide uppercase text-[var(--sq-color-accent,#B08D57)] font-medium">{orgName}</p>
+        <h1 className="text-2xl font-semibold text-[var(--sq-color-text-primary,#1B3A4B)] mt-2">
           {t.welcomeTo} {locationName}
         </h1>
 
@@ -325,40 +339,42 @@ export function GuestFlow({ slug, locationId, orgName, locationName, defaultLang
                 <button
                   onClick={() => goToCrumb(i)}
                   className={
-                    i === trail.length - 1 ? 'text-[#1B3A4B] font-medium' : 'text-[#6B7280]'
+                    i === trail.length - 1 ? 'text-[var(--sq-color-text-primary,#1B3A4B)] font-medium' : 'text-[var(--sq-color-text-secondary,#6B7280)]'
                   }
                 >
                   {i === 0 ? t.menu : crumb.name}
                 </button>
-                {i < trail.length - 1 && <span className="text-[#9CA3AF]">›</span>}
+                {i < trail.length - 1 && <span className="text-[var(--sq-color-text-secondary,#9CA3AF)]">›</span>}
               </span>
             ))}
           </div>
         )}
       </header>
 
-      <div className="px-6 grid grid-cols-2 gap-3">
-        {loading && <p className="col-span-2 text-[#6B7280] text-sm">…</p>}
+      {/* Card and layout markup comes from the variant registry, not from here. */}
+      <div className={`px-6 ${menu.containerClass}`}>
+        {loading && (
+          <p className={`${menu.spanClass} text-[var(--sq-color-text-secondary,#6B7280)] text-sm`}>
+            …
+          </p>
+        )}
         {!loading && menuError && (
-          <p className="col-span-2 text-sm text-red-600">{t.errorTryAgain}</p>
+          <p className={`${menu.spanClass} text-sm text-red-600`}>{t.errorTryAgain}</p>
         )}
         {!loading && !menuError && nodes.length === 0 && (
-          <p className="col-span-2 text-[#6B7280] text-sm">{t.noServices}</p>
+          <p className={`${menu.spanClass} text-[var(--sq-color-text-secondary,#6B7280)] text-sm`}>
+            {t.noServices}
+          </p>
         )}
         {!loading &&
           nodes.map((node) => (
-            <button
+            <menu.Card
               key={node.id}
-              onClick={() => openNode(node)}
-              className={`rounded-2xl p-5 bg-white text-[#1B3A4B] border-2 border-transparent hover:border-[#E5E0D5] ${
-                dir === 'rtl' ? 'text-right' : 'text-left'
-              }`}
-            >
-              <span className="text-lg font-medium block">{node.name}</span>
-              <span className="text-xs text-[#9CA3AF] mt-1 block">
-                {node.type === 'CATEGORY' ? t.tapToExplore : ''}
-              </span>
-            </button>
+              node={node}
+              priceDisplay={menu.priceDisplay}
+              onOpen={() => openNode(node)}
+              exploreLabel={t.tapToExplore}
+            />
           ))}
       </div>
     </main>

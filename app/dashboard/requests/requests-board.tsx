@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useApi } from '@/lib/use-api';
+import { formatMoney, type ComponentValue } from '@/lib/components';
 
 type RequestItem = {
   id: string;
@@ -10,8 +11,68 @@ type RequestItem = {
   notes: string | null;
   createdAt: string;
   location: { name: string };
-  offeringType: { name: string; icon: string };
+  /** Snapshot of the item name at order time. */
+  itemName: string | null;
+  componentValues: ComponentValue[] | null;
 };
+
+const GUEST_INFO_LABELS: Record<string, string> = {
+  fullName: 'Name',
+  phone: 'Phone',
+  age: 'Age',
+};
+
+/** Flattens any component value to something a human can read at a glance. */
+function formatValue(entry: ComponentValue): string {
+  const { value } = entry;
+  if (Array.isArray(value)) return value.join(', ');
+
+  if (value !== null && typeof value === 'object') {
+    // TIME_RANGE: "14:00–16:00" rather than "start: 14:00, end: 16:00"
+    if ('start' in value && 'end' in value) {
+      return `${String(value.start)}–${String(value.end)}`;
+    }
+    // PRICE: "50 USD"
+    if ('amount' in value) {
+      return formatMoney(Number(value.amount), String(value.currency ?? ''));
+    }
+    // QUANTITY_PRICED: "2 Adults, 1 Kid — total 250 USD".
+    // `lines` and `computedTotal` are written by the API, not the guest.
+    if ('quantities' in value) {
+      const currency = String(value.currency ?? '');
+      const lines = Array.isArray(value.lines) ? value.lines : [];
+      const parts = lines.map((l) => `${l.quantity} × ${l.label}`).join(', ');
+      const total =
+        entry.computedTotal !== undefined
+          ? ` — total ${formatMoney(entry.computedTotal, currency)}`
+          : '';
+      return `${parts}${total}`;
+    }
+    // Priced select: "VIP (+15 USD)" additive, "Sunset — 35 USD" absolute.
+    // `selected` and `computedTotal` come from the API's config-authoritative snapshot.
+    if ('selected' in value && Array.isArray(value.selected)) {
+      const currency = String(value.currency ?? '');
+      const additive = value.mode === 'ADDITIVE';
+      const names = value.selected.map((s) => String(s.label)).join(', ');
+      const total =
+        entry.computedTotal !== undefined
+          ? `${additive ? ' — total ' : ' — '}${formatMoney(entry.computedTotal, currency)}`
+          : '';
+      return `${names}${total}`;
+    }
+    // GUEST_INFO: "Name: John, Phone: 555…, Age: 30"
+    return Object.entries(value)
+      .map(([key, v]) => `${GUEST_INFO_LABELS[key] ?? key}: ${String(v)}`)
+      .join(', ');
+  }
+  return String(value);
+}
+
+/** "Size: Large · Toppings: Extra cheese, Olives · Guest: Name: John, Age: 30" */
+function summarizeValues(values: RequestItem['componentValues']): string {
+  if (!Array.isArray(values) || values.length === 0) return '';
+  return values.map((v) => `${v.label}: ${formatValue(v)}`).join(' · ');
+}
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: 'bg-amber-100 text-amber-800',
@@ -108,11 +169,16 @@ export function RequestsBoard() {
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{r.offeringType.name}</span>
+                    <span className="font-medium">{r.itemName ?? 'Request'}</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLES[r.status]}`}>
                       {r.status.replace('_', ' ').toLowerCase()}
                     </span>
                   </div>
+                  {summarizeValues(r.componentValues) && (
+                    <p className="text-sm text-[#1B3A4B] mt-0.5">
+                      {summarizeValues(r.componentValues)}
+                    </p>
+                  )}
                   <p className="text-sm text-gray-500 mt-0.5">
                     {r.location.name}
                     {r.notes ? ` · ${r.notes}` : ''}
@@ -156,7 +222,7 @@ export function RequestsBoard() {
                 className="flex items-center justify-between rounded-lg border bg-gray-50 p-3 opacity-70"
               >
                 <div>
-                  <span className="font-medium text-gray-600">{r.offeringType.name}</span>
+                  <span className="font-medium text-gray-600">{r.itemName ?? 'Request'}</span>
                   <p className="text-xs text-gray-400 mt-0.5">
                     {r.location.name} · {timeAgo(r.createdAt)}
                   </p>

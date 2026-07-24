@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { createNode, deleteNode } from './actions';
-import { ModifierPanel } from './modifier-panel';
+import { ComponentEditor } from './component-editor';
 import type { TreeNode } from './types';
 
 export function TreeEditor({ tree }: { tree: TreeNode[] }) {
@@ -114,7 +114,7 @@ function NodeRow({ node, depth }: { node: TreeNode; depth: number }) {
 
       {configuring && !isCategory && (
         <div style={{ marginLeft: (depth + 1) * 20 }} className="mt-1">
-          <ModifierPanel itemId={node.id} />
+          <ComponentEditor itemId={node.id} />
         </div>
       )}
 
