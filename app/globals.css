@@ -17,6 +17,13 @@
 }
 
 :root {
+  /* The admin + auth surface is intentionally light-only (guest pages do their
+     own theming via [data-sq-theme]). Pin color-scheme to light so the browser
+     never swaps in a dark body background — in dark mode the old
+     prefers-color-scheme override turned the body #0a0a0a and text near-white,
+     which made light-styled panels and any redirecting/loading state render as
+     a black screen. */
+  color-scheme: light;
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -26,13 +33,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
