@@ -1,4 +1,33 @@
+import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
+
+/** Quick-access cards on the dashboard home — mirror the top nav sections. */
+const QUICK_LINKS = [
+  {
+    href: '/dashboard/menu',
+    icon: '🍽️',
+    title: 'Menu',
+    description: 'Add and edit the services guests can request',
+  },
+  {
+    href: '/dashboard/locations',
+    icon: '📍',
+    title: 'Locations',
+    description: 'Manage rooms and their QR codes',
+  },
+  {
+    href: '/dashboard/requests',
+    icon: '🔔',
+    title: 'Requests',
+    description: 'See and handle incoming guest requests',
+  },
+  {
+    href: '/dashboard/appearance',
+    icon: '🎨',
+    title: 'Appearance',
+    description: 'Theme your guest pages and templates',
+  },
+] as const;
 
 type Me = {
   email: string;
@@ -38,7 +67,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <main className="p-8 max-w-2xl mx-auto">
+    <main className="p-8 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">ServeyceQr Dashboard</h1>
 
       {error && (
@@ -73,6 +102,31 @@ export default async function DashboardPage() {
           )}
         </div>
       )}
+
+      <section className="mt-10">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
+          Quick access
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {QUICK_LINKS.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="group rounded-lg border bg-white p-5 transition-colors hover:border-gray-900"
+            >
+              <div className="flex items-start gap-3">
+                <span className="text-2xl" aria-hidden>
+                  {link.icon}
+                </span>
+                <div>
+                  <p className="font-medium">{link.title}</p>
+                  <p className="text-sm text-gray-500">{link.description}</p>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
     </main>
   );
 }
